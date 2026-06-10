@@ -1,40 +1,40 @@
 ## Note , this result is based on Mac Min M4 16GB RAM, 10-core CPU
-[Info] 開始執行 tgz, lz4a, tlz4 基準測試 / Starting benchmark for tgz, lz4a, tlz4...
+[Info] 開始執行 tgz, lz4a, tlz4 基準測試 / Starting benchmark for tgz, lzfse, tlz4...
 
 
 [Info] 測試 getar 壓縮 / Testing getar compression:
-234M	proj
-224M	proj.tgz
-==> Process getar proj took: 3705347061 奈秒/nanoseconds
+140M	sample_wix
+ 25M	sample_wix.tgz
+==> Process getar sample_wix took: 2419937134 奈秒/nanoseconds
 
-[Info] 測試 lz4a  壓縮 / Testing lz4a compression:
-234M	proj
-224M	proj.lz4a
-==> Process lz4a proj took: 2215111017 奈秒/nanoseconds
+[Info] 測試 lzfseX  壓縮 / Testing lzfseX compression:
+140M	sample_wix
+ 21M	sample_wix.lzfse
+==> Process lzfseX sample_wix took: 0753859997 奈秒/nanoseconds
 
 [Info] 測試 tlz4  壓縮 / Testing tlz4 compression:
-234M	proj
-220M	proj.tar.lz4
-==> Process tlz4 proj took: 0252645016 奈秒/nanoseconds
+140M	sample_wix
+ 38M	sample_wix.tar.lz4
+==> Process tlz4 sample_wix took: 0232564926 奈秒/nanoseconds
 
 ==================================================
 [Info] 開始評測解壓縮速度 / Benchmarking decompression score:
 ==================================================
 
 [Info] 測試 tgz 解壓 / Testing tgz extraction:
-nanoTimeElapsed extract proj.tgz
-==> Process extract proj.tgz took: 0420404911 奈秒/nanoseconds
+nanoTimeElapsed extract sample_wix.tgz
+==> Process extract sample_wix.tgz took: 0380614996 奈秒/nanoseconds
 
-[Info] 測試 unlz4a 解壓 / Testing unlz4a extraction:
-nanoTimeElapsed unlz4a proj.lz4a
-234M	/Volumes/RAMDisk/proj
-==> Process unlz4a proj.lz4a took: 2128637075 奈秒/nanoseconds
+[Info] 測試 lzfse 解壓 / Testing lzfse extraction:
+nanoTimeElapsed extract sample_wix.lzfse
+lzfse -decode -i sample_wix.lzfse -so | tar -xf - 
+==> Process extract sample_wix.lzfse took: 0405045033 奈秒/nanoseconds
 
 [Info] 測試 tlz4 解壓 / Testing tlz4 extraction:
-nanoTimeElapsed extract proj.tar.lz4
-==> Process extract proj.tar.lz4 took: 0295735121 奈秒/nanoseconds
+nanoTimeElapsed extract sample_wix.tar.lz4
+==> Process extract sample_wix.tar.lz4 took: 0343693018 奈秒/nanoseconds
 
-[Success] tgz,lz4a 解壓後的內容完全一致！ / Decompressed contents are identical!
+[Success] tgz,lzfse 解壓後的內容完全一致！ / Decompressed contents are identical!
 
 [Success] tgz,tlz4 解壓後的內容完全一致！ / Decompressed contents are identical!
 

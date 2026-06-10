@@ -1,4 +1,4 @@
-# 🚀 跨平台優化 Zsh 配置 (fashZsh)
+# 🚀 跨平台優化 Zsh 配置 (fastZsh)
 
 ![Zsh Support](https://img.shields.io/badge/Shell-Zsh%205.0+-blue?style=for-the-badge&logo=gnu-bash)
 ![Platform Support](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS-orange?style=for-the-badge)
@@ -73,56 +73,51 @@ cheditor nano     # 將預設編輯器切換為 nano
 * `fsize` : 以人類可讀形式列出目錄內檔案，並自動依大小從大到小排序。
 * `trash` : 將檔案或資料夾安全移至 `~/.Trash`，避免誤刪造成永久損失。
 * `extract` : 用單一指令判斷並解開多種常見壓縮格式，包含 `.tar.gz`、`.zip`、`.7z`、`.xz`、`.rar`、`.lz4` 等。
-
-## 🧩 平行壓縮與解壓工具
-* `ffilter` : 將 stdin 中的路徑空白與引號進行跳脫，讓帶特殊字元路徑的 `xargs` 管道更穩定。
-* `lz4a` : 透過系統核心數 `$PACORES` 並行壓縮資料夾，使用最高 LZ4 壓縮率 `-9m`，輸出 `.lz4a` 封存檔，並顯示壓縮前後大小對比。
-* `unlz4a` : 解開 `.lz4a` 封存檔，還原原始資料夾結構，並清理暫存檔案。
+* `lzfseX` : 使用Apple's propietary LZFSE algorithm進行壓縮資料夾
 
 ### 🔬 `lz4bench` — 平行 LZ4 基準測試
-* **用途**：執行完整的壓縮與解壓基準測試，比較 `tgz`、`lz4a` 與 `tlz4` 的效能（使用高解析度時間戳記）。該函式會在完成後檢查解壓內容的一致性。
-* **用法**：`lz4bench <資料夾名稱>` — 傳入資料夾的基礎名稱（腳本預期存在對應的 `<name>.tgz`、`<name>.lz4a`、`<name>.tar.lz4` 封存檔）。
+* **用途**：執行完整的壓縮與解壓基準測試，比較 `tgz`、`lzfse` 與 `tlz4` 的效能（使用高解析度時間戳記）。該函式會在完成後檢查解壓內容的一致性。
+* **用法**：`lz4bench <資料夾名稱>` — 傳入資料夾的基礎名稱（腳本預期存在對應的 `<name>.tgz`、`<name>.lzfse`、`<name>.tar.lz4` 封存檔）。
 * **輸出**：列印每個步驟的耗時以及完整性檢查。範例輸出（示例 — 結果會依機器與資料集不同而變化）：
 
 ```
 ## Note , this result is based on Mac Mini M4 16GB RAM, 10-core CPU, the best results is using tlz4 and extract.
-
-[Info] 開始執行 tgz, lz4a, tlz4 基準測試 / Starting benchmark for tgz, lz4a, tlz4...
+[Info] 開始執行 tgz, lz4a, tlz4 基準測試 / Starting benchmark for tgz, lzfse, tlz4...
 
 
 [Info] 測試 getar 壓縮 / Testing getar compression:
-234M	proj
-224M	proj.tgz
-==> Process getar proj took: 3705347061 奈秒/nanoseconds
+140M	sample_wix
+ 25M	sample_wix.tgz
+==> Process getar sample_wix took: 2419937134 奈秒/nanoseconds
 
-[Info] 測試 lz4a  壓縮 / Testing lz4a compression:
-234M	proj
-224M	proj.lz4a
-==> Process lz4a proj took: 2215111017 奈秒/nanoseconds
+[Info] 測試 lzfseX  壓縮 / Testing lzfseX compression:
+140M	sample_wix
+ 21M	sample_wix.lzfse
+==> Process lzfseX sample_wix took: 0753859997 奈秒/nanoseconds
 
 [Info] 測試 tlz4  壓縮 / Testing tlz4 compression:
-234M	proj
-220M	proj.tar.lz4
-==> Process tlz4 proj took: 0252645016 奈秒/nanoseconds
+140M	sample_wix
+ 38M	sample_wix.tar.lz4
+==> Process tlz4 sample_wix took: 0232564926 奈秒/nanoseconds
 
 ==================================================
 [Info] 開始評測解壓縮速度 / Benchmarking decompression score:
 ==================================================
 
 [Info] 測試 tgz 解壓 / Testing tgz extraction:
-nanoTimeElapsed extract proj.tgz
-==> Process extract proj.tgz took: 0420404911 奈秒/nanoseconds
+nanoTimeElapsed extract sample_wix.tgz
+==> Process extract sample_wix.tgz took: 0380614996 奈秒/nanoseconds
 
-[Info] 測試 unlz4a 解壓 / Testing unlz4a extraction:
-nanoTimeElapsed unlz4a proj.lz4a
-234M	/Volumes/RAMDisk/proj
-==> Process unlz4a proj.lz4a took: 2128637075 奈秒/nanoseconds
+[Info] 測試 lzfse 解壓 / Testing lzfse extraction:
+nanoTimeElapsed extract sample_wix.lzfse
+lzfse -decode -i sample_wix.lzfse -so | tar -xf - 
+==> Process extract sample_wix.lzfse took: 0405045033 奈秒/nanoseconds
 
 [Info] 測試 tlz4 解壓 / Testing tlz4 extraction:
-nanoTimeElapsed extract proj.tar.lz4
-==> Process extract proj.tar.lz4 took: 0295735121 奈秒/nanoseconds
+nanoTimeElapsed extract sample_wix.tar.lz4
+==> Process extract sample_wix.tar.lz4 took: 0343693018 奈秒/nanoseconds
 
-[Success] tgz,lz4a 解壓後的內容完全一致！ / Decompressed contents are identical!
+[Success] tgz,lzfse 解壓後的內容完全一致！ / Decompressed contents are identical!
 
 [Success] tgz,tlz4 解壓後的內容完全一致！ / Decompressed contents are identical!
 

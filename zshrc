@@ -56,6 +56,7 @@ elif [ "$(uname -s)" = "Darwin" ]; then
     alias f='open -a Finder ./'               
     READLINK="greadlink" # Requires coreutils via Homebrew / 建議使用 Homebrew 安裝 coreutils
     system_VER=64
+    export PATH="/opt/homebrew/bin:$PATH"
     export JAVA_HOME=$(/usr/libexec/java_home 2>/dev/null)
     export BREW_PREFIX="/usr/local"
     export BLOCKSIZE=4096
@@ -303,6 +304,7 @@ trash () {
 extract () {
     if [ -f "$1" ] ; then
         case "$1" in
+            *.lzfse)     echo "lzfse -decode -i $1 -so | tar -xf - " ; lzfse -decode -i $1 -so | tar -xf -  ;;
             *.tar.lz4)   lz4 -T0 -d -q -c $1 | tar -xf - ;;
             *.tar.xz)    tar xf "$1"      ;;
             *.tar.bz2)   tar xjf "$1"     ;;
@@ -369,6 +371,12 @@ function getar() {
     XZ_OPT=-e9 tar czf "$1".tgz "$1"
     du -sh $1
     du -sh $1.tgz
+}
+
+function lzfseX() {
+    tar -cf - $1 | lzfse -encode -si -o $1.lzfse
+    du -sh $1
+    du -sh $1.lzfse
 }
 
 function tlz4() {
@@ -613,9 +621,9 @@ function unlz4a() {
 # ------------------------------------------------------------------------------
 # FUNCTION: lz4bench()
 # DESCRIPTION: Benchmarks and compares the performance (speed and execution time)
-#              between 'lz4a','tgz', 'tlz4' using precise 'date' timestamps.
+#              between 'lzfse','tgz', 'tlz4' using precise 'date' timestamps.
 #
-# 功能描述：壓縮效能基準測試。利用 'date' 時間戳記精準計算並比較 'lz4a' ,'tgz', 'tlz4' 
+# 功能描述：壓縮效能基準測試。利用 'date' 時間戳記精準計算並比較 'lzfse' ,'tgz', 'tlz4' 
 #        在壓縮與解壓縮過程中的實際耗時（秒）。
 # ------------------------------------------------------------------------------
 function lz4bench() {
@@ -624,22 +632,22 @@ function lz4bench() {
         echo "錯誤: 請指定要測試的目錄 / Error: Please specify a directory to benchmark" >&2
         return 1
     fi
-    echo $'[Info] 開始執行 tgz, lz4a, tlz4 基準測試 / Starting benchmark for tgz, lz4a, tlz4...\n'
+    echo $'[Info] 開始執行 tgz, lzfse, tlz4 基準測試 / Starting benchmark for tgz, lzfse, tlz4...\n'
 
     # --------------------------------------------------------------------------
-    # 1.測試 getar 壓縮速度 / Test lz4a compression speed
+    # 1.測試 getar 壓縮速度 / Test tar.gz compression speed
     # --------------------------------------------------------------------------
     echo $'\n[Info] 測試 getar 壓縮 / Testing getar compression:'
     nanoTimeElapsed getar $1
 
     # --------------------------------------------------------------------------
-    # 1. 測試 lz4a 壓縮速度 / Test lz4a compression speed
+    # 1. 測試 lzfse 壓縮速度 / Test lzfseX compression speed
     # --------------------------------------------------------------------------
-    echo $'\n[Info] 測試 lz4a  壓縮 / Testing lz4a compression:'
-    nanoTimeElapsed lz4a $1
+    echo $'\n[Info] 測試 lzfseX  壓縮 / Testing lzfseX compression:'
+    nanoTimeElapsed lzfseX $1
 
     # --------------------------------------------------------------------------
-    # 1. 測試 tlz4 壓縮速度 / Test lz4a compression speed
+    # 1. 測試 tlz4 壓縮速度 / Test tlz4 compression speed
     # --------------------------------------------------------------------------
     echo $'\n[Info] 測試 tlz4  壓縮 / Testing tlz4 compression:'
     nanoTimeElapsed tlz4 $1
@@ -663,16 +671,16 @@ function lz4bench() {
     cd ../.. > /dev/null 2>&1
 
     # --------------------------------------------------------------------------
-    # 2. 測試 lz4a 解壓速度 / Test lz4a decompression speed
+    # 2. 測試 lzfseX 解壓速度 / Test lzfseX decompression speed
     # --------------------------------------------------------------------------
-    mkdir -p ./xbenchTest/lz4a > /dev/null 2>&1
-    cp $1.lz4a ./xbenchTest/lz4a > /dev/null 2>&1
-    cd ./xbenchTest/lz4a > /dev/null 2>&1
+    mkdir -p ./xbenchTest/lzfse > /dev/null 2>&1
+    cp $1.lzfse ./xbenchTest/lzfse > /dev/null 2>&1
+    cd ./xbenchTest/lzfse > /dev/null 2>&1
     rm -rf $1 > /dev/null 2>&1
     
-    echo $'\n[Info] 測試 unlz4a 解壓 / Testing unlz4a extraction:' 
-    echo nanoTimeElapsed unlz4a $1.lz4a
-    nanoTimeElapsed unlz4a $1.lz4a
+    echo $'\n[Info] 測試 lzfse 解壓 / Testing lzfse extraction:' 
+    echo nanoTimeElapsed extract $1.lzfse
+    nanoTimeElapsed extract $1.lzfse
     cd ../.. > /dev/null 2>&1
 
     # --------------------------------------------------------------------------
@@ -691,7 +699,7 @@ function lz4bench() {
     # --------------------------------------------------------------------------
     # 3. 環境環境清理 / Sandbox cleanup
     # --------------------------------------------------------------------------
-    diff -rq ./xbenchTest/tgz/$1 ./xbenchTest/lz4a/$1 > /dev/null 2>&1 && echo $'\n[Success] tgz,lz4a 解壓後的內容完全一致！ / Decompressed contents are identical!' || echo $'\n[Warning] tgz,lz4a  解壓後的內容不一致！ / tgz,lz4a Decompressed contents differ!'
+    diff -rq ./xbenchTest/tgz/$1 ./xbenchTest/lzfse/$1 > /dev/null 2>&1 && echo $'\n[Success] tgz,lzfse 解壓後的內容完全一致！ / Decompressed contents are identical!' || echo $'\n[Warning] tgz,lzfse  解壓後的內容不一致！ / tgz,lzfse Decompressed contents differ!'
     diff -rq ./xbenchTest/tgz/$1 ./xbenchTest/tlz4/$1 > /dev/null 2>&1 && echo $'\n[Success] tgz,tlz4 解壓後的內容完全一致！ / Decompressed contents are identical!' || echo $'\n[Warning] tgz,tlz4  解壓後的內容不一致！ / tgz,tlz4 Decompressed contents differ!'
     # rm -rf xbenchTest
     
@@ -708,7 +716,7 @@ function START_UP@END() {
     export MAKEJOBS="-j16"  # Parallel compilation limit / 限制平行編譯最大執行緒數
     alias cgrep="grep --color=always"
     # printenv       # Output environment map on terminal login / 登入時印出當前環境變數快照
-    makeram
+    # makeram
     diskutil list | grep "RAMDisk" -B4 | grep "/dev" | awk '{print $1}' | tail -n +2 | xargs -I {} diskutil eject {}
 }
 
