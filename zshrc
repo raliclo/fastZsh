@@ -366,6 +366,9 @@ trash () {
 extract () {
     if [ -f "$1" ] ; then
         case "$1" in
+            *.lzfse.other)     echo "lzfse -decode -i $1 -so -algo other  | tar -xf - " ; lzfse -decode -i $1 -so -algo other  | tar -xf -  ;;
+            *.lzfse.apple)     echo "lzfse -decode -i $1 -so -algo apple  | tar -xf - " ; lzfse -decode -i $1 -so -algo apple  | tar -xf -  ;;
+            *.lzfse)           echo "lzfse -decode -i $1 -so -algo other2 | tar -xf - " ; lzfse -decode -i $1 -so -algo other2 | tar -xf -  ;;
             *.tar.lz4)   lz4 -T0 -d -q -c $1 | tar -xf - ;;
             *.tar.xz)    tar xf "$1"      ;;
             *.tar.bz2)   tar xjf "$1"     ;;
@@ -390,7 +393,6 @@ extract () {
         echo "'$1' is not a valid file"
     fi
 }
-
 
 function nanoTimeElapsed() {
     zmodload zsh/datetime
@@ -432,6 +434,32 @@ function getar() {
     XZ_OPT=-e9 tar czf "$1".tgz "$1"
     du -sh $1
     du -sh $1.tgz
+}
+
+
+function lzfseX() {
+    # 如果參數 $1 為空則提示並退出
+    if [[ -z "$1" ]]; then
+        echo "使用方法: lzfseX <檔案或目錄> [演算法]"
+        return 1
+    fi
+
+    # 設置預設值為 'other' (若 $2 為空)
+    local algo="${2:-other}"
+    
+    # 若演算法為 apple，副檔名為 lzfse.apple，否則為 lzfse
+    local extension="lzfse"
+    [[ "$algo" == "apple" ]] && extension="lzfse.apple"
+    [[ "$algo" == "other" ]] && extension="lzfse.other"
+
+    # 執行壓縮
+    echo tar -cf - $1 "|" lzfse -encode -si -o $1.$extension -algo $algo
+    tar -cf - "$1" | lzfse -encode -si -o "$1.$extension" -algo "$algo"
+    
+    # 顯示檔案大小
+    echo "--- 壓縮資訊 ---"
+    du -sh "$1"
+    du -sh "$1.$extension"
 }
 
 function tlz4() {
@@ -672,7 +700,6 @@ function unlz4a() {
 #      請確保系統中已安裝 `lz4`、`tar` 與 `xargs`，並在你想還原檔案的目標目錄下執行此指令。
 #
 
-
 # ------------------------------------------------------------------------------
 # FUNCTION: lz4bench()
 # DESCRIPTION: Benchmarks and compares the performance (speed and execution time)
@@ -687,7 +714,7 @@ function lz4bench() {
         echo "錯誤: 請指定要測試的目錄 / Error: Please specify a directory to benchmark" >&2
         return 1
     fi
-    echo $'[Info] 開始執行 tgz, lz4a, tlz4 基準測試 / Starting benchmark for tgz, lz4a, tlz4...\n'
+    echo $'[Info] 開始執行 tgz, lz4a, tlz4 基準測試 / Starting benchmark for tgz, lzfse, tlz4...\n'
 
     # --------------------------------------------------------------------------
     # 1.測試 getar 壓縮速度 / Test lz4a compression speed
@@ -696,10 +723,16 @@ function lz4bench() {
     nanoTimeElapsed getar $1
 
     # --------------------------------------------------------------------------
-    # 1. 測試 lz4a 壓縮速度 / Test lz4a compression speed
+    # 1. 測試 lzfse 壓縮速度 / Test lzfseX compression speed
     # --------------------------------------------------------------------------
-    echo $'\n[Info] 測試 lz4a  壓縮 / Testing lz4a compression:'
-    nanoTimeElapsed lz4a $1
+    echo $'\n[Info] 測試 lzfseX other 壓縮 / Testing lzfseX other compression:'
+    nanoTimeElapsed lzfseX $1 other
+
+    echo $'\n[Info] 測試 lzfseX other2 壓縮 / Testing lzfseX other2 compression:'
+    nanoTimeElapsed lzfseX $1 other2
+
+    echo $'\n[Info] 測試 lzfseX apple 壓縮 / Testing lzfseX apple compression:'
+    nanoTimeElapsed lzfseX $1 apple
 
     # --------------------------------------------------------------------------
     # 1. 測試 tlz4 壓縮速度 / Test lz4a compression speed
@@ -726,16 +759,38 @@ function lz4bench() {
     cd ../.. > /dev/null 2>&1
 
     # --------------------------------------------------------------------------
-    # 2. 測試 lz4a 解壓速度 / Test lz4a decompression speed
+    # 2. 測試 lzfseX 解壓速度 / Test lzfseX decompression speed
     # --------------------------------------------------------------------------
-    mkdir -p ./xbenchTest/lz4a > /dev/null 2>&1
-    cp $1.lz4a ./xbenchTest/lz4a > /dev/null 2>&1
-    cd ./xbenchTest/lz4a > /dev/null 2>&1
+
+
+    mkdir -p ./xbenchTest/lzfse_other > /dev/null 2>&1
+    cp $1.lzfse.other ./xbenchTest/lzfse_other    > /dev/null 2>&1
+    cd ./xbenchTest/lzfse_other > /dev/null 2>&1
     rm -rf $1 > /dev/null 2>&1
     
-    echo $'\n[Info] 測試 unlz4a 解壓 / Testing unlz4a extraction:' 
-    echo nanoTimeElapsed unlz4a $1.lz4a
-    nanoTimeElapsed unlz4a $1.lz4a
+    echo $'\n[Info] 測試 lzfse.other 解壓 / Testing lzfse.other extraction:' 
+    echo nanoTimeElapsed extract $1.lzfse.other
+    nanoTimeElapsed extract $1.lzfse.other
+    cd ../.. > /dev/null 2>&1
+
+    mkdir -p ./xbenchTest/lzfse > /dev/null 2>&1
+    cp $1.lzfse ./xbenchTest/lzfse > /dev/null 2>&1
+    cd ./xbenchTest/lzfse > /dev/null 2>&1
+    rm -rf $1 > /dev/null 2>&1
+    
+    echo $'\n[Info] 測試 lzfse 解壓 / Testing lzfse extraction:' 
+    echo nanoTimeElapsed extract $1.lzfse
+    nanoTimeElapsed extract $1.lzfse
+    cd ../.. > /dev/null 2>&1
+
+        mkdir -p ./xbenchTest/lzfse_apple > /dev/null 2>&1
+    cp $1.lzfse.apple ./xbenchTest/lzfse_apple > /dev/null 2>&1
+    cd ./xbenchTest/lzfse_apple > /dev/null 2>&1
+    rm -rf $1 > /dev/null 2>&1
+    
+    echo $'\n[Info] 測試 lzfse.apple 解壓 / Testing lzfse.apple extraction:' 
+    echo nanoTimeElapsed extract $1.lzfse.apple
+    nanoTimeElapsed extract $1.lzfse.apple
     cd ../.. > /dev/null 2>&1
 
     # --------------------------------------------------------------------------
@@ -754,13 +809,15 @@ function lz4bench() {
     # --------------------------------------------------------------------------
     # 3. 環境環境清理 / Sandbox cleanup
     # --------------------------------------------------------------------------
-    diff -rq ./xbenchTest/tgz/$1 ./xbenchTest/lz4a/$1 > /dev/null 2>&1 && echo $'\n[Success] tgz,lz4a 解壓後的內容完全一致！ / Decompressed contents are identical!' || echo $'\n[Warning] tgz,lz4a  解壓後的內容不一致！ / tgz,lz4a Decompressed contents differ!'
     diff -rq ./xbenchTest/tgz/$1 ./xbenchTest/tlz4/$1 > /dev/null 2>&1 && echo $'\n[Success] tgz,tlz4 解壓後的內容完全一致！ / Decompressed contents are identical!' || echo $'\n[Warning] tgz,tlz4  解壓後的內容不一致！ / tgz,tlz4 Decompressed contents differ!'
+    diff -rq ./xbenchTest/tgz/$1 ./xbenchTest/lzfse/$1 > /dev/null 2>&1 && echo $'\n[Success] tgz,lzfse 解壓後的內容完全一致！ / Decompressed contents are identical!' || echo $'\n[Warning] tgz,lzfse  解壓後的內容不一致！ / tgz,lzfse Decompressed contents differ!'
+    diff -rq ./xbenchTest/tgz/$1 ./xbenchTest/lzfse_other/$1 > /dev/null 2>&1 && echo $'\n[Success] tgz,lzfse_other 解壓後的內容完全一致！ / Decompressed contents are identical!' || echo $'\n[Warning] tgz,lzfse_other  解壓後的內容不一致！ / tgz,lzfse_other Decompressed contents differ!'
+    diff -rq ./xbenchTest/tgz/$1 ./xbenchTest/lzfse_apple/$1 > /dev/null 2>&1 && echo $'\n[Success] tgz,lzfse_apple 解壓後的內容完全一致！ / Decompressed contents are identical!' || echo $'\n[Warning] tgz,lzfse  解壓後的內容不一致！ / tgz,lzfse Decompressed contents differ!'
+
     # rm -rf xbenchTest
     
     echo $'\n[Info] 基準測試完成！ / Benchmark finished!'
 }
-
 
 function claudeCodeEnv(){
     # 1. 將 API 導向你的本地 llama-server
@@ -768,7 +825,8 @@ function claudeCodeEnv(){
 
     # 2. 本地不需要真正的 Key，隨便填一個偽裝字串即可
     export ANTHROPIC_API_KEY="JesusLoveYou"
-
+    export OPENAI_API_KEY="JesusLoveYou"
+    
     # 3. 覆蓋 Claude Code 的預設模型別名（強迫它對應到你的本地模型）
     export ANTHROPIC_DEFAULT_SONNET_MODEL="gemma-4"
     export ANTHROPIC_DEFAULT_HAIKU_MODEL="gemma-4"
@@ -810,9 +868,9 @@ function START_UP@END() {
     export MAKEJOBS="-j16"  # Parallel compilation limit / 限制平行編譯最大執行緒數
     alias cgrep="grep --color=always"
     # printenv       # Output environment map on terminal login / 登入時印出當前環境變數快照
-    makeram
+    # makeram
     diskutil list | grep "RAMDisk" -B4 | grep "/dev" | awk '{print $1}' | tail -n +2 | xargs -I {} diskutil eject {}
-    claudeCodeEnv 2>&1 > /dev/null
+    # claudeCodeEnv 2>&1 > /dev/null
 }
 
 START_UP@END
