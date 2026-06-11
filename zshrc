@@ -366,9 +366,9 @@ trash () {
 extract () {
     if [ -f "$1" ] ; then
         case "$1" in
-            *.lzfse.other)     echo "lzfse -decode -i $1 -so -algo other  | tar -xf - " ; lzfse -decode -i $1 -so -algo other  | tar -xf -  ;;
+            *.lzfse.bvx3)      echo "lzfse -decode -i $1 -so -algo bvx3   | tar -xf - " ; lzfse -decode -i $1 -so -algo bvx3   | tar -xf -  ;;   
+            *.lzfse.other3)    echo "lzfse -decode -i $1 -so -algo other3 | tar -xf - " ; lzfse -decode -i $1 -so -algo other3 | tar -xf -  ;;  
             *.lzfse.apple)     echo "lzfse -decode -i $1 -so -algo apple  | tar -xf - " ; lzfse -decode -i $1 -so -algo apple  | tar -xf -  ;;
-            *.lzfse)           echo "lzfse -decode -i $1 -so -algo other2 | tar -xf - " ; lzfse -decode -i $1 -so -algo other2 | tar -xf -  ;;
             *.tar.lz4)   lz4 -T0 -d -q -c $1 | tar -xf - ;;
             *.zst)       zstd -d -c "$1" | tar -xf - ;;
             *.tar.xz)    tar xf "$1"      ;;
@@ -445,12 +445,13 @@ function lzfseX() {
     fi
 
     # 設置預設值為 'other' (若 $2 為空)
-    local algo="${2:-other}"
+    local algo="${2:-other3}"
     
     # 若演算法為 apple，副檔名為 lzfse.apple，否則為 lzfse
-    local extension="lzfse"
+    local extension="lzfse.other3"
     [[ "$algo" == "apple" ]] && extension="lzfse.apple"
-    [[ "$algo" == "other" ]] && extension="lzfse.other"
+    [[ "$algo" == "bvx3" ]] && extension="lzfse.bvx3"
+    [[ "$algo" == "other3" ]] && extension="lzfse.other3" 
 
     # 執行壓縮
     echo tar -cf - $1 "|" lzfse -encode -si -o $1.$extension -algo $algo
@@ -501,11 +502,12 @@ function lz4bench() {
     # --------------------------------------------------------------------------
     # 1. 測試 lzfse 壓縮速度 / Test lzfseX compression speed
     # --------------------------------------------------------------------------
-    echo $'\n[Info] 測試 lzfseX other 壓縮 / Testing lzfseX other compression:'
-    nanoTimeElapsed lzfseX $1 other
-
-    echo $'\n[Info] 測試 lzfseX other2 壓縮 / Testing lzfseX other2 compression:'
-    nanoTimeElapsed lzfseX $1 other2
+    
+    echo $'\n[Info] 測試 lzfseX other3 壓縮 / Testing lzfseX other3 compression:'
+    nanoTimeElapsed lzfseX $1 other3
+    
+    echo $'\n[Info] 測試 lzfseX bvx3 壓縮 / Testing lzfseX bvx3 compression:'
+    nanoTimeElapsed lzfseX $1 bvx3
 
     echo $'\n[Info] 測試 lzfseX apple 壓縮 / Testing lzfseX apple compression:'
     nanoTimeElapsed lzfseX $1 apple
@@ -543,27 +545,28 @@ function lz4bench() {
     # 2. 測試 lzfseX 解壓速度 / Test lzfseX decompression speed
     # --------------------------------------------------------------------------
 
-    mkdir -p ./xbenchTest/lzfse_other > /dev/null 2>&1
-    cp $1.lzfse.other ./xbenchTest/lzfse_other    > /dev/null 2>&1
-    cd ./xbenchTest/lzfse_other > /dev/null 2>&1
+    mkdir -p ./xbenchTest/lzfse_other3 > /dev/null 2>&1
+    cp $1.lzfse.other3 ./xbenchTest/lzfse_other3 > /dev/null 2>&1
+    cd ./xbenchTest/lzfse_other3 > /dev/null 2>&1
     rm -rf $1 > /dev/null 2>&1
-    
-    echo $'\n[Info] 測試 lzfse.other 解壓 / Testing lzfse.other extraction:' 
-    echo nanoTimeElapsed extract $1.lzfse.other
-    nanoTimeElapsed extract $1.lzfse.other
+ 
+    echo $'\n[Info] 測試 lzfse.other3 解壓 / Testing lzfse.other3 extraction:'
+    echo nanoTimeElapsed extract $1.lzfse.other3
+    nanoTimeElapsed extract $1.lzfse.other3
     cd ../.. > /dev/null 2>&1
 
-    mkdir -p ./xbenchTest/lzfse > /dev/null 2>&1
-    cp $1.lzfse ./xbenchTest/lzfse > /dev/null 2>&1
-    cd ./xbenchTest/lzfse > /dev/null 2>&1
+
+    mkdir -p ./xbenchTest/lzfse_bvx3 > /dev/null 2>&1
+    cp $1.lzfse.bvx3 ./xbenchTest/lzfse_bvx3 > /dev/null 2>&1
+    cd ./xbenchTest/lzfse_bvx3 > /dev/null 2>&1
     rm -rf $1 > /dev/null 2>&1
-    
-    echo $'\n[Info] 測試 lzfse 解壓 / Testing lzfse extraction:' 
-    echo nanoTimeElapsed extract $1.lzfse
-    nanoTimeElapsed extract $1.lzfse
+ 
+    echo $'\n[Info] 測試 lzfse.bvx3 解壓 / Testing lzfse.bvx3 extraction:'
+    echo nanoTimeElapsed extract $1.lzfse.bvx3
+    nanoTimeElapsed extract $1.lzfse.bvx3
     cd ../.. > /dev/null 2>&1
 
-        mkdir -p ./xbenchTest/lzfse_apple > /dev/null 2>&1
+    mkdir -p ./xbenchTest/lzfse_apple > /dev/null 2>&1
     cp $1.lzfse.apple ./xbenchTest/lzfse_apple > /dev/null 2>&1
     cd ./xbenchTest/lzfse_apple > /dev/null 2>&1
     rm -rf $1 > /dev/null 2>&1
@@ -603,8 +606,8 @@ function lz4bench() {
     # 3. 環境環境清理 / Sandbox cleanup
     # --------------------------------------------------------------------------
     diff -rq ./xbenchTest/tgz/$1 ./xbenchTest/tlz4/$1 > /dev/null 2>&1 && echo $'\n[Success] tgz,tlz4 解壓後的內容完全一致！ / Decompressed contents are identical!' || echo $'\n[Warning] tgz,tlz4  解壓後的內容不一致！ / tgz,tlz4 Decompressed contents differ!'
-    diff -rq ./xbenchTest/tgz/$1 ./xbenchTest/lzfse/$1 > /dev/null 2>&1 && echo $'\n[Success] tgz,lzfse 解壓後的內容完全一致！ / Decompressed contents are identical!' || echo $'\n[Warning] tgz,lzfse  解壓後的內容不一致！ / tgz,lzfse Decompressed contents differ!'
-    diff -rq ./xbenchTest/tgz/$1 ./xbenchTest/lzfse_other/$1 > /dev/null 2>&1 && echo $'\n[Success] tgz,lzfse_other 解壓後的內容完全一致！ / Decompressed contents are identical!' || echo $'\n[Warning] tgz,lzfse_other  解壓後的內容不一致！ / tgz,lzfse_other Decompressed contents differ!'
+    diff -rq ./xbenchTest/tgz/$1 ./xbenchTest/lzfse_other3/$1 > /dev/null 2>&1 && echo $'\n[Success] tgz,lzfse_other3 解壓後的內容完全一致！ / Decompressed contents are identical!' || echo $'\n[Warning] tgz,lzfse_other3  解壓後的內容不一致！ / tgz,lzfse_other3 Decompressed contents differ!'
+    diff -rq ./xbenchTest/tgz/$1 ./xbenchTest/lzfse_bvx3/$1 > /dev/null 2>&1 && echo $'\n[Success] tgz,lzfse_bvx3 解壓後的內容完全一致！ / Decompressed contents are identical!' || echo $'\n[Warning] tgz,lzfse_bvx3  解壓後的內容不一致！ / tgz,lzfse_bvx3 Decompressed contents differ!'
     diff -rq ./xbenchTest/tgz/$1 ./xbenchTest/lzfse_apple/$1 > /dev/null 2>&1 && echo $'\n[Success] tgz,lzfse_apple 解壓後的內容完全一致！ / Decompressed contents are identical!' || echo $'\n[Warning] tgz,lzfse  解壓後的內容不一致！ / tgz,lzfse Decompressed contents differ!'
     diff -rq ./xbenchTest/tgz/$1 ./xbenchTest/zstd/$1 > /dev/null 2>&1 && echo $'\n[Success] tgz,zstd 解壓後的內容完全一致！ / Decompressed contents are identical!' || echo $'\n[Warning] tgz,zstd  解壓後的內容不一致！ / tgz,zstd Decompressed contents differ!'
 
